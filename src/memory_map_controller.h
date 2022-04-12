@@ -21,17 +21,37 @@ public:
      * @return Begin address of memory-mapped region.
      */
     template <typename Type>
-    Type* falloc(unsigned long n);
+    Type* falloc(unsigned long n){
+        return falloc<Type>(n, 0);
+    }
 
     /**
-     * Creates and memory-maps a new temporary file of size n * sizeof(Type). Advises kernel of expected behaviour.
-     * @tparam Type element type.
+     * Creates and memory-maps a new temporary file of size n * sizeof(T). Advises kernel of expected behaviour.
+     * @tparam T element type.
      * @param n number of elements.
      * @param madvise advise to kernel.
      * @return Begin address of memory-mapped region.
      */
-    template <typename Type>
-    Type* falloc(unsigned long n, int madvise);
+    template <typename T>
+    T* falloc(unsigned long n, int madvise) {
+        FILE* temporary_file = std::tmpfile();
+        int file_descriptor = temporary_file->_fileno;
+        if (file_descriptor < 0) {
+            perror("Could not create temporary file for falloc");
+            exit(1);
+        }
+        long bytes = n * sizeof(T);
+        ftruncate(file_descriptor, bytes);
+        T* begin = (T*) mmap64(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE, file_descriptor, 0);
+
+        if ((unsigned char*) begin == MAP_FAILED) {
+            perror("Could not memory map file");
+            exit(1);
+        }
+        ::madvise(begin, bytes, madvise);
+        files_.emplace(begin, {temporary_file, bytes});
+        return begin;
+    }
 
     /**
      * Unmaps a previously memory-mapped region of memory.
