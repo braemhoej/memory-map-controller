@@ -29,11 +29,11 @@ public:
      * Creates and memory-maps a new temporary file of size n * sizeof(T). Advises kernel of expected behaviour.
      * @tparam T element type.
      * @param n number of elements.
-     * @param madvise advise to kernel.
+     * @param advice advise to kernel.
      * @return Begin address of memory-mapped region.
      */
     template <typename T>
-    T* falloc(unsigned long n, int madvise) {
+    T* falloc(unsigned long n, int advice) {
         FILE* temporary_file = std::tmpfile();
         int file_descriptor = temporary_file->_fileno;
         if (file_descriptor < 0) {
@@ -41,14 +41,14 @@ public:
             exit(1);
         }
         long bytes = n * sizeof(T);
-        ftruncate(file_descriptor, bytes);
-        T* begin = (T*) mmap64(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE, file_descriptor, 0);
+        ::ftruncate(file_descriptor, bytes);
+        T* begin = (T*) ::mmap64(nullptr, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE, file_descriptor, 0);
 
         if ((unsigned char*) begin == MAP_FAILED) {
             perror("Could not memory map file");
             exit(1);
         }
-        ::madvise(begin, bytes, madvise);
+        ::madvise(begin, bytes, advice);
         files_.emplace(begin, {temporary_file, bytes});
         return begin;
     }
