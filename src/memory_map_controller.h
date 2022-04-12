@@ -49,7 +49,7 @@ public:
             exit(1);
         }
         ::madvise(begin, bytes, advice);
-        files_.emplace(begin, {temporary_file, bytes});
+        files_.insert({begin, {temporary_file, bytes}});
         return begin;
     }
 
